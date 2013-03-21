@@ -1,4 +1,4 @@
-module DataProcessor
+class DataProcessor
   
   # Read all lines of csv file +file_path+ and take +features+
   # columns as the features of the data and +outputs+ columns
@@ -28,9 +28,20 @@ module DataProcessor
   #
   # If +features+ + +outputs+ is greater than the file columns,
   # it will take as many features as it can and as many outputs as it can.
+  # If can't take any output, it will return nil for each output
   # For example: +load_raw_data("data.csv", 3, 80) == load_raw_data("data.csv", 3, 2)+
-  def load_raw_data(file_path, features, outputs)
-    
+  def self.load_raw_data(file_path, features, outputs)
+    f = []
+    o = []
+    File.open(file_path, "r") do |infile|
+      while (line = infile.gets)
+        tmp = line.split(",")
+        tmp.map!{|e| e.chomp.strip }
+        f << tmp[0, features]
+        o << (features >= tmp.size || outputs <= 0 ? [nil] : tmp[features, outputs])
+      end
+    end    
+    [f, o]
   end
   
   # If raw_data can have missing values, this method can be used
@@ -52,7 +63,8 @@ module DataProcessor
   #      +info[0] # nil+
   #      +info[1] # mean of column 1 of raw_data+
   #      +info[2] # mode of column 2 of raw_data+
-  def treat_missing_values(raw_data, methods)
+  # WARNING: raw_data is changed, i.e. it modify the input data
+  def self.treat_missing_values!(raw_data, methods)
     
   end
   
@@ -66,23 +78,53 @@ module DataProcessor
   #   * +Fixnum+: Assume that +raw_data[i][j]+ is a continuous variable
   #     and divide it in +mapper[j]+ classes
   #   * +nil+: Do not map +raw_data[i][j]+
-  # => 
-  def map_raw_data(raw_data, mapper)
+  # WARNING: raw_data is changed, i.e. it modify the input data
+  def self.map_raw_data!(raw_data, mapper)
     
   end
   
-  # Divide +data+ in 2 sets of size +data.size * ratio+ and
-  # +data.size * (1 - ratio)+. The division is made according to 
+  # Divide +features+ in 2 sets of size +features.size * ratio+ and
+  # +features.size * (1 - ratio)+. The division is made according to 
   # +method+:
   #   * +:random+: Split data randomly
-  #   * +:uniformly+: Split data randomly but taking +data.size * ratio / n+
-  #     elements for each classification where +n+ is the number of classes.
+  #   * +:uniformly+: Split data randomly but taking +outputs.size * ratio / n+
+  #     elements for each classification where +n+ is the number of different
+  #     elements in +outputs+ (the number of classes)
   #
   # Return an array of two elements where first element is an
-  # array with +data.size * ratio+ elements taken from +data+ and 
-  # the second element is an array with +data.size * (1 - ratio)+ taken
-  # from +data+.
-  def split_examples(data, ratio, method = :random)
-    
+  # array of +features.size * ratio+ features and the second element are
+  # the corresponding outputs (taken from +features+ and +outputs+).
+  # WARNING: Elements selected are deleted from features and outputs
+  def self.split_examples!(features, outputs, ratio, method = :random)
+    features2 = []
+    outputs2 = []
+    n = (features.size*ratio).round
+    m = features.size - n
+    case method
+    when :random
+      n.times do
+        i = rand features.size
+        features2 << features.delete_at(i)
+        outputs2 << outputs.delete_at(i)
+      end # After this, all elements not selected will be in set2
+    when :uniformly
+      classes = outputs.uniq
+      max_elems_by_class = [(n / classes.size.to_f).round, 1].max
+      elems_in_each_class = Array.new classes.size, 0
+      if classes.any?{|c| outputs.count(c) < max_elems_by_class}
+        raise "Can't return a balanced set" and return
+      end
+      n.times do
+        i = rand outputs.size
+        class_selected = classes.index(outputs[i])
+        redo if elems_in_each_class[class_selected] >= max_elems_by_class
+        features2 << features.delete_at(i)
+        outputs2 << outputs.delete_at(i)
+        elems_in_each_class[class_selected] += 1
+      end
+    else
+      raise "Incorrect method"
+    end
+    [features2, outputs2]
   end
 end

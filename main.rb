@@ -1,7 +1,26 @@
+#encoding: UTF-8
+require './data_processor.rb'
+
 # Cargar datos
+number_of_features = 6
+number_of_outputs = 1
+raw_inputs, raw_outputs = DataProcessor.load_raw_data("data.csv", number_of_features, number_of_outputs)
+
+# Normalizar datos primera vez: mapear strings a Float 
+# OJO: Esto supone que todos los datos son numeros. Si hubiesen datos nominales habría
+# que llevarlos a numero primero
+raw_inputs.map!{|e| e.map!{|e1| e1.to_f}}
+raw_outputs.map!{|e| e.map!{|e1| e1.to_f}}
+
 # Tratar missing values
-# Normalizar datos (llevar continuos a clases) (Creo que esto no es necesario)
+
+# Normalizar datos por segunda vez: (llevar continuos a clases) (Creo que esto no es necesario)
+
 # Separar datos en entrenamiento y prueba
+split_ratio = 0.5
+training_inputs, training_outputs = DataProcessor.split_examples!(raw_inputs, raw_outputs, split_ratio, :uniformly)
+testing_inputs, testing_outputs = raw_inputs, raw_outputs
+
 # Para todas las configuraciones que se quieran
 #   Crear la red neural
 #   Mientras no se cumpla el criterio de parada
