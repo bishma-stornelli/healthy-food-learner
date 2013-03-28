@@ -30,16 +30,15 @@ class Learner
     :testing_examples, :testing_outputs,
     :n_features, :n_hidden, :weights,
     :input_neurons, :hidden_neurons, :output_neurons
-  attr_accessor :learning_rate, :max_iterations, :error_tolerance
-  def initialize(n_features, n_hidden, options = {})
+  attr_accessor :learning_rate, :max_iterations, :error_tolerance, :training_examples, :training_outputs, :testing_examples, :testing_outputs
+  def initialize(n_features, n_hidden, learning_rate, options = {})
     options = {
-      :learning_rate => 0.1, 
       :max_iterations => 1000,
       :error_tolerance => 0.01
       }.merge(options)
+    @learning_rate = learning_rate
     @n_features = n_features + 1
     @n_hidden = n_hidden + 1
-    @learning_rate = options[:learning_rate]
     @weights = []
     @training_examples = []
     @testing_examples = []
@@ -50,8 +49,8 @@ class Learner
     @input_neurons = Array.new(@n_features){ |i| i }
     @hidden_neurons = Array.new(@n_hidden){ |i| @n_features + i }
     @output_neurons = [@n_features + @n_hidden]
-    @max_iterations = max_iterations
-    @error_tolerance = error_tolerance
+    @max_iterations = options[:max_iterations]
+    @error_tolerance = options[:error_tolerance]
   end
 
   # Split the training_examples in 2 sets, storing raw_examples.size * percentage
@@ -61,16 +60,16 @@ class Learner
   #    first raw_examples.size * percentage elements (poor)
   #    randomly and uniformly (half classified 0 and half classified 1) (good)
   # param percentage is a float between 0 and 1
-  def split_examples(percentage)
-    @testing_examples = []
-    @testing_outputs = []
-    n = (@training_examples.size*percentage).round
-    n.times do
-      i = rand @training_examples.size
-      @testing_examples << @training_examples.delete_at(i)
-      @testing_outputs << @training_outputs.delete_at(i)
-    end
-  end
+  # def split_examples(percentage)
+  #   @testing_examples = []
+  #   @testing_outputs = []
+  #   n = (@training_examples.size*percentage).round
+  #   n.times do
+  #     i = rand @training_examples.size
+  #     @testing_examples << @training_examples.delete_at(i)
+  #     @testing_outputs << @training_outputs.delete_at(i)
+  #   end
+  # end
 
   def train
     @weights = initialize_weights
@@ -90,8 +89,10 @@ class Learner
         o = evaluate(ei)
         correct += 1 if o.last.round == @training_outputs[i]
 
+        puts "tamano output: " + @output_neurons.length.to_s + "\n"
+
         for k in @output_neurons do
-          lambdas[k] = o[k] * (1 - o[k] ) * (@training_outputs[i] - o[k] )        
+          lambdas[k] = o[k] * (1 - o[k] ) * (@training_outputs[i] - o[k] )
         end 
 
         for h in @hidden_neurons do
@@ -102,7 +103,7 @@ class Learner
 
         update_weights(lambdas, o)
       end
-      #puts "#{past_e} - #{e} = #{(past_e - e).abs}"
+      # puts "#{past_e} - #{e} = #{(past_e - e).abs}"
       #if (past_e - e).abs <= 0.000000001
       #  return
       #end
@@ -122,11 +123,15 @@ class Learner
   # returns an array such that o[k] is the output for neuron k
   # o tiene que tener las posiciones definidas para las neuronas de entrada tambien (TODAS)
   def evaluate(example)
-    outs = example.dup    
+    outs = example.dup
+
+    puts "tamano input: " + @input_neurons.length.to_s + "\n"
     
     @hidden_neurons.each do |h|
       tmp = 0
       @input_neurons.each do |i|
+        # puts "tamano: " + @weights[h].length.to_s + "\n"
+        # puts "weights[#{h}][#{i}]: " + @weights[h][i].to_s + " outs: " + outs[i].to_s + "\n"
         tmp = tmp + @weights[h][i] * outs[i]
       end
       outs[h] = sig(tmp)
@@ -154,15 +159,13 @@ class Learner
     end
   end  
   
-  def load_training_examples(file_path, output_map = {}, sep = ",")
-    load_examples(@training_examples, @training_outputs, file_path, output_map, sep)
-  end
+  # def load_training_examples(file_path, output_map = {}, sep = ",")
+  #   load_examples(@training_examples, @training_outputs, file_path, output_map, sep)
+  # end
   
-  def load_testing_examples(file_path, output_map = {}, sep = ",")
-    load_examples(@testing_examples, @testing_outputs, file_path, output_map, sep)
-  end
-  
-  
+  # def load_testing_examples(file_path, output_map = {}, sep = ",")
+  #   load_examples(@testing_examples, @testing_outputs, file_path, output_map, sep)
+  # end
   
   # Load the examples from the file file_path taking the first n_features 
   # (from 0 to n_features) columns as features and 
@@ -171,17 +174,17 @@ class Learner
   # {"1" => "1", "2" => "0"} for example).
   # It stores the inputs in the inputs variable and the outputs in the 
   # outputs variable (they must be initialized before calling this method).
-  def load_examples(inputs, outputs, file_path, output_map = {}, separator = ",")
-    File.open(file_path, "r") do |infile|
-      while (line = infile.gets)
-        tmp = line.split(separator)
-        tmp[n_features - 1 ] = output_map[tmp[n_features - 1]].nil? ? tmp[n_features - 1] : output_map[tmp[n_features - 1]]
-        tmp.map!{|a| a.to_f}
-        outputs << tmp[n_features - 1]
-        inputs << (tmp[0,n_features - 1].concat([1.0]))
-      end
-    end
-  end
+  # def load_examples(inputs, outputs, file_path, output_map = {}, separator = ",")
+  #   File.open(file_path, "r") do |infile|
+  #     while (line = infile.gets)
+  #       tmp = line.split(separator)
+  #       tmp[n_features - 1 ] = output_map[tmp[n_features - 1]].nil? ? tmp[n_features - 1] : output_map[tmp[n_features - 1]]
+  #       tmp.map!{|a| a.to_f}
+  #       outputs << tmp[n_features - 1]
+  #       inputs << (tmp[0,n_features - 1].concat([1.0]))
+  #     end
+  #   end
+  # end
 
   # Update weights with the differences in lambdas
   def update_weights(lambdas, outs)
