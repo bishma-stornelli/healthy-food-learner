@@ -40,7 +40,7 @@ class DataProcessor
         f << tmp[0, features]
         o << (features >= tmp.size || outputs <= 0 ? [nil] : tmp[features, outputs])
       end
-    end    
+    end
     [f, o]
   end
   
@@ -67,7 +67,7 @@ class DataProcessor
   def self.treat_missing_values!(raw_data)
     raw_data.each_with_index do | val, i |
       val.each_with_index do | item, j |
-        if item.nil?
+        if item == 0
           array = Array.new()
           raw_data.each do |variable|
             array << variable[j]

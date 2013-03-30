@@ -39,7 +39,7 @@ begin
   bests = {}
   file_path = "data.csv"
 
-  number_of_features = 52
+  number_of_features = 51
   number_of_outputs = 1
   raw_inputs, raw_outputs = DataProcessor.load_raw_data(file_path, number_of_features, number_of_outputs)
 
@@ -57,7 +57,7 @@ begin
 
 # Separar datos en entrenamiento y prueba
   split_ratio = 0.5
-  training_inputs, training_outputs = DataProcessor.split_examples!(raw_inputs, raw_outputs, split_ratio, :uniformly)
+  training_inputs, training_outputs = DataProcessor.split_examples!(raw_inputs, raw_outputs, split_ratio)
   testing_inputs, testing_outputs = raw_inputs, raw_outputs
 
   (6..15).each do |n_hidden|
@@ -93,15 +93,15 @@ begin
     end
   end
   
-  f_config = File.open("configuration", "w")
+  f_config = File.open("outputs/configuration", "w")
   f_config.write("File\t\tn_hidden\t\tlearning_rate\t\ttesting_error\t\ttraining_error\n")
     
   bests.each do |file_path, conf|
     f_config.write("#{file_path}\t\t#{conf[:n_hidden]}\t\t#{conf[:learning_rate]}" +
       "\t\t#{conf[:error][:testing]}\t\t#{conf[:error][:training]}\n")
     
-    f1 = File.open("#{file_path}_0", "w")
-    f2 = File.open("#{file_path}_1", "w")
+    f1 = File.open("outputs/#{file_path}_0", "w")
+    f2 = File.open("outputs/#{file_path}_1", "w")
     
     l = conf[:learner]
     l.training_examples.each do |e|

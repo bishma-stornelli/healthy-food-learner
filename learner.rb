@@ -26,10 +26,7 @@ class Learner
   #     en la capa oculta (e.g.: [4, 5, 6] para n_features = 4 y n_hidden = 3)
   #   output_neurons (Array[Fixnum]): vector que contiene los ids de las neuronas
   #     en la capa de salida (por ahora solo es una neurona de salida y su valor sera [n_features + n_hidden])
-  attr_reader :training_examples, :training_outputs,
-    :testing_examples, :testing_outputs,
-    :n_features, :n_hidden, :weights,
-    :input_neurons, :hidden_neurons, :output_neurons
+  attr_reader :training_examples, :training_outputs, :testing_examples, :testing_outputs, :n_features, :n_hidden, :weights, :input_neurons, :hidden_neurons, :output_neurons
   attr_accessor :learning_rate, :max_iterations, :error_tolerance, :training_examples, :training_outputs, :testing_examples, :testing_outputs
   def initialize(n_features, n_hidden, learning_rate, options = {})
     options = {
@@ -37,8 +34,8 @@ class Learner
       :error_tolerance => 0.01
       }.merge(options)
     @learning_rate = learning_rate
-    @n_features = n_features + 1
-    @n_hidden = n_hidden + 1
+    @n_features = n_features
+    @n_hidden = n_hidden
     @weights = []
     @training_examples = []
     @testing_examples = []
@@ -87,19 +84,18 @@ class Learner
         lambdas = Array.new
         
         o = evaluate(ei)
-        correct += 1 if o.last.round == @training_outputs[i]
 
-        puts "tamano output: " + @output_neurons.length.to_s + "\n"
+        correct += 1 if o.last.round == @training_outputs[i][0]
 
         for k in @output_neurons do
-          lambdas[k] = o[k] * (1 - o[k] ) * (@training_outputs[i] - o[k] )
+          lambdas[k] = o[k] * (1.0 - o[k] ) * (@training_outputs[i][0] - o[k] )
         end 
 
         for h in @hidden_neurons do
-          lambdas[h] = o[h] * (1 - o[h]) * @output_neurons.inject(0) {|acc, k| acc + @weights[k][h] * lambdas[k]}
+          lambdas[h] = o[h] * (1.0 - o[h]) * @output_neurons.inject(0) {|acc, k| acc + @weights[k][h] * lambdas[k]}
         end
         
-        e += ((@training_outputs[i] - o.last)**2) / @training_outputs.size
+        e += ((@training_outputs[i][0] - o.last)**2.0) / @training_outputs.size
 
         update_weights(lambdas, o)
       end
@@ -124,8 +120,6 @@ class Learner
   # o tiene que tener las posiciones definidas para las neuronas de entrada tambien (TODAS)
   def evaluate(example)
     outs = example.dup
-
-    puts "tamano input: " + @input_neurons.length.to_s + "\n"
     
     @hidden_neurons.each do |h|
       tmp = 0
@@ -154,8 +148,10 @@ class Learner
   # Calculate the error in examples with respect to the expected
   # outputs outputs
   def error(examples, outputs)
-    outputs.each_with_index.inject(0) do |acc, (output, index)| 
-      acc + ((output - evaluate(examples[index]).last)**2 ) / outputs.size
+    outputs.each_with_index.inject(0) do |acc, (output, index)|
+      a = evaluate(examples[index])
+      #puts a.to_s + "\n"
+      acc + ((output[0] - a.last)**2.0 ) / outputs.size
     end
   end  
   
