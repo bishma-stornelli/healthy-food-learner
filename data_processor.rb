@@ -55,14 +55,16 @@ class DataProcessor
   #   * +nil+: Do nothing with column +j+
   #   * +:mean+: Replace missing values with the mean for that column
   #   * +:mode+: Replace missing values with the mode for that column
+  #   * +:zero+: Replace missing values with 0.0
   #
   # => returns an array which first element is the modified data and the
   #    second element is an array of +methods.size+ elements and the value
   #    of each element will depend on the value of +methods+. For example:
-  #      +data, info = treat_missing_values(raw_data, [nil, :mean, :mode])+
+  #      +data, info = treat_missing_values(raw_data, [nil, :mean, :mode, :zero])+
   #      +info[0] # nil+
   #      +info[1] # mean of column 1 of raw_data+
   #      +info[2] # mode of column 2 of raw_data+
+  #      +info[3] # 0.0+
   # WARNING: raw_data is changed, i.e. it modifies the input data
   def self.treat_missing_values!(raw_data, methods = nil)
     return [[],[]] if raw_data.empty?
@@ -81,6 +83,8 @@ class DataProcessor
             no_missing_values = raw_data.map{|row| row[j] }.compact
             info[j] = no_missing_values.reduce(0.0, :+) / no_missing_values.size
           end
+        when :zero
+          info[j] = 0.0
         end
         
         raw_data[i][j] = info[j] if item.nil?
