@@ -46,12 +46,12 @@ begin
 # Normalizar datos primera vez: mapear strings a Float 
 # OJO: Esto supone que todos los datos son numeros. Si hubiesen datos nominales habría
 # que llevarlos a numero primero
-  raw_inputs.map!{|e| e.map!{|e1| e1.to_f}}
-  raw_outputs.map!{|e| e.map!{|e1| e1.to_f}}
+  raw_inputs.map!{|e| e.map!{|e1| e1.empty? ? nil : e1.to_f}}
+  raw_outputs.map!{|e| e.map!{|e1| e1.empty? ? nil : e1.to_f}}
 
 # Tratar missing values
 
-  DataProcessor.treat_missing_values!(raw_inputs)
+  raw_inputs, column_info = DataProcessor.treat_missing_values!(raw_inputs, [:mean] * number_of_features)
 
 # Normalizar datos por segunda vez: (llevar continuos a clases) (Creo que esto no es necesario)
 

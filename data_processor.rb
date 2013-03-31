@@ -64,23 +64,30 @@ class DataProcessor
   #      +info[1] # mean of column 1 of raw_data+
   #      +info[2] # mode of column 2 of raw_data+
   # WARNING: raw_data is changed, i.e. it modifies the input data
-  def self.treat_missing_values!(raw_data)
+  def self.treat_missing_values!(raw_data, methods = nil)
+    return [[],[]] if raw_data.empty?
+    
+    methods ||= Array.new(raw_data.first.size)
+    info = Array.new raw_data.first.size
+    
     raw_data.each_with_index do | val, i |
       val.each_with_index do | item, j |
-        if item == 0
-          array = Array.new()
-          raw_data.each do |variable|
-            array << variable[j]
+        
+        case methods[j]
+        when nil
+          info[j] ||= nil
+        when :mean
+          if info[j].nil?
+            no_missing_values = raw_data.map{|row| row[j] }.compact
+            info[j] = no_missing_values.reduce(0.0, :+) / no_missing_values.size
           end
-          array = array.compact
-          mean = 0
-          if array.length != 0
-            mean = array.reduce(:+) / array.length.to_f
-          end
-          raw_data[i][j] = mean
         end
+        
+        raw_data[i][j] = info[j] if item.nil?
       end
     end
+    
+    [raw_data, info]
   end
   
   # Process the data in +raw_data+ using +mapper+.
