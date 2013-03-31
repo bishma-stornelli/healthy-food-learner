@@ -26,93 +26,54 @@ class Learner
   #     en la capa oculta (e.g.: [4, 5, 6] para n_features = 4 y n_hidden = 3)
   #   output_neurons (Array[Fixnum]): vector que contiene los ids de las neuronas
   #     en la capa de salida (por ahora solo es una neurona de salida y su valor sera [n_features + n_hidden])
-  attr_reader :training_examples, :training_outputs, :testing_examples, :testing_outputs, :n_features, :n_hidden, :weights, :input_neurons, :hidden_neurons, :output_neurons
-  attr_accessor :learning_rate, :max_iterations, :error_tolerance, :training_examples, :training_outputs, :testing_examples, :testing_outputs
+  attr_reader :n_features, :n_hidden, :current_iteration, :current_error, :weights
+  attr_accessor :learning_rate, :training_examples, :testing_examples, :training_outputs, :testing_outputs
   def initialize(n_features, n_hidden, learning_rate, options = {})
-    options = {
-      :max_iterations => 1000,
-      :error_tolerance => 0.01
-      }.merge(options)
     @learning_rate = learning_rate
     @n_features = n_features
     @n_hidden = n_hidden
-    @weights = []
     @training_examples = []
     @testing_examples = []
-    @raw_examples = []
     @training_outputs = []
     @testing_outputs = []
-    @raw_outputs = []
     @input_neurons = Array.new(@n_features){ |i| i }
     @hidden_neurons = Array.new(@n_hidden){ |i| @n_features + i }
     @output_neurons = [@n_features + @n_hidden]
-    @max_iterations = options[:max_iterations]
-    @error_tolerance = options[:error_tolerance]
+    @weights = initialize_weights
+    @current_iteration = 0
+    @current_error = Float::INFINITY
   end
 
-  # Split the training_examples in 2 sets, storing raw_examples.size * percentage
-  # in training_examples and the rest in testing_examples
-  # The split might be done in three ways (pick one):
-  #    randomly (medium good)
-  #    first raw_examples.size * percentage elements (poor)
-  #    randomly and uniformly (half classified 0 and half classified 1) (good)
-  # param percentage is a float between 0 and 1
-  # def split_examples(percentage)
-  #   @testing_examples = []
-  #   @testing_outputs = []
-  #   n = (@training_examples.size*percentage).round
-  #   n.times do
-  #     i = rand @training_examples.size
-  #     @testing_examples << @training_examples.delete_at(i)
-  #     @testing_outputs << @training_outputs.delete_at(i)
-  #   end
-  # end
-
+  # a
+  # returns the number of examples classified correctly
   def train
-    @weights = initialize_weights
-    report = []
+    e = 0
+    correct = 0
+    @training_examples.each_with_index do |ei, i|
+      lambdas = Array.new
+      
+      o = evaluate(ei)
 
-    iteration = 0
-    
-    e = Float::INFINITY
-    past_e = e
+      correct += 1 if o.last.round == @training_outputs[i][0]
 
-    while (e > @error_tolerance && iteration < @max_iterations) do
-      e = 0
-      correct = 0
-      @training_examples.each_with_index do |ei, i|
-        lambdas = Array.new
-        
-        o = evaluate(ei)
+      for k in @output_neurons do
+        lambdas[k] = o[k] * (1.0 - o[k] ) * (@training_outputs[i][0] - o[k] )
+      end 
 
-        correct += 1 if o.last.round == @training_outputs[i][0]
-
-        for k in @output_neurons do
-          lambdas[k] = o[k] * (1.0 - o[k] ) * (@training_outputs[i][0] - o[k] )
-        end 
-
-        for h in @hidden_neurons do
-          lambdas[h] = o[h] * (1.0 - o[h]) * @output_neurons.inject(0) {|acc, k| acc + @weights[k][h] * lambdas[k]}
-        end
-        
-        e += ((@training_outputs[i][0] - o.last)**2.0) / @training_outputs.size
-
-        update_weights(lambdas, o)
-      end
-      # puts "#{past_e} - #{e} = #{(past_e - e).abs}"
-      #if (past_e - e).abs <= 0.000000001
-      #  return
-      #end
-      past_e = e
-      report << [iteration, e]
-      #sleep 0.2
-      if iteration % 100 == 0
-        puts "> #{iteration}, Correct = #{correct}/#{@training_outputs.size}"
+      for h in @hidden_neurons do
+        lambdas[h] = o[h] * (1.0 - o[h]) * @output_neurons.inject(0) {|acc, k| acc + @weights[k][h] * lambdas[k]}
       end
       
-      iteration += 1
+      e += ((@training_outputs[i][0] - o.last)**2.0) / @training_outputs.size
+
+      update_weights(lambdas, o)
     end
-    report
+    
+    @current_error = e
+    
+    @current_iteration += 1
+    
+    correct
   end
 
   # Evaluate the input example with the current weights and
@@ -141,10 +102,6 @@ class Learner
     outs
   end
 
-  def sig(x)
-    1.0 / (1.0 + Math.exp(-x))
-  end
-
   # Calculate the error in examples with respect to the expected
   # outputs outputs
   def error(examples, outputs)
@@ -155,33 +112,12 @@ class Learner
     end
   end  
   
-  # def load_training_examples(file_path, output_map = {}, sep = ",")
-  #   load_examples(@training_examples, @training_outputs, file_path, output_map, sep)
-  # end
-  
-  # def load_testing_examples(file_path, output_map = {}, sep = ",")
-  #   load_examples(@testing_examples, @testing_outputs, file_path, output_map, sep)
-  # end
-  
-  # Load the examples from the file file_path taking the first n_features 
-  # (from 0 to n_features) columns as features and 
-  # the n_features column as the outputs while mapping them
-  # using the hash output_map (which is in the form of
-  # {"1" => "1", "2" => "0"} for example).
-  # It stores the inputs in the inputs variable and the outputs in the 
-  # outputs variable (they must be initialized before calling this method).
-  # def load_examples(inputs, outputs, file_path, output_map = {}, separator = ",")
-  #   File.open(file_path, "r") do |infile|
-  #     while (line = infile.gets)
-  #       tmp = line.split(separator)
-  #       tmp[n_features - 1 ] = output_map[tmp[n_features - 1]].nil? ? tmp[n_features - 1] : output_map[tmp[n_features - 1]]
-  #       tmp.map!{|a| a.to_f}
-  #       outputs << tmp[n_features - 1]
-  #       inputs << (tmp[0,n_features - 1].concat([1.0]))
-  #     end
-  #   end
-  # end
+  private
 
+  def sig(x)
+    1.0 / (1.0 + Math.exp(-x))
+  end
+  
   # Update weights with the differences in lambdas
   def update_weights(lambdas, outs)
     # Orden n_hidden * n_features <= 20
@@ -196,7 +132,7 @@ class Learner
         @weights[o][h] = @weights[o][h] + learning_rate*lambdas[o]*outs[h]
       end
     end 
-  end  
+  end
   
   # Initialize the weights of the network randomly
   # returns an array such that w[i][j] is the weight from neuron j to i
