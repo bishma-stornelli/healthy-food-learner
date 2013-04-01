@@ -41,17 +41,14 @@ begin
   
   # Look the best combination for each file
   bests = {}
-  file_path = "data_example.csv"
-  puts "Colocar nombre de archivo correcto en linea 44 del main.rb y borrar las lineas 45, 46 y 47"
-end
-if nil
+  file_path = "data.csv"
 
-  number_of_features = 2
+  number_of_features = 27
   number_of_outputs = 1
   configuration = 1
               
   f_config = File.open("outputs/configuration.csv", "w")
-  f_config.puts "Configuración,Neuronas ocultas,tasa de aprendizaje,unbalanced data,missing data,split ration,Tiempo de entrenamiento,Error sobre entrenamiento,Error sobre prueba,Numero de iteraciones,Correctos en entrenamiento,Tamaño entrenamiento,Correctos en prueba,Tamaño prueba"  
+  f_config.puts "Configuración,Neuronas ocultas,tasa de aprendizaje,unbalanced data,missing data,split ration,Tiempo de entrenamiento,Error sobre entrenamiento,Error sobre prueba,Numero de iteraciones,Correctos en entrenamiento,Tamaño entrenamiento,Correctos en prueba,Tamaño prueba,positivos en entrenamiento,positivos en prueba"  
   
   (6..15).each do |n_hidden|
     [0.01, 0.05, 0.1, 0.2, 0.3].each do |learning_rate|
@@ -106,7 +103,7 @@ if nil
             testing_error = l.error(l.testing_examples, l.testing_outputs)
             testing_correct = l.correct_classified( l.testing_examples, l.testing_outputs )
             puts "Error en prueba: #{testing_error},Error en entrenamiento: #{l.error(l.training_examples, l.training_outputs)}"
-            f_config.puts "#{configuration},#{n_hidden},#{learning_rate},#{unbalance_method},#{missing_data_method},#{split_ratio},#{t_fin - t_ini},#{l.current_error},#{testing_error},#{l.current_iteration},#{correct},#{l.training_outputs.size},#{testing_correct},#{l.testing_outputs.size}"  
+            f_config.puts "#{configuration},#{n_hidden},#{learning_rate},#{unbalance_method},#{missing_data_method},#{split_ratio},#{t_fin - t_ini},#{l.current_error},#{testing_error},#{l.current_iteration},#{correct},#{l.training_outputs.size},#{testing_correct},#{l.testing_outputs.size},#{l.training_outputs.count [1.0]},#{l.testing_outputs.count [1.0]}"  
             f_config.flush
             configuration += 1
           end
