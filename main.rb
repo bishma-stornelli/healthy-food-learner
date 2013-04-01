@@ -39,6 +39,8 @@ begin
   bests = {}
   file_path = "data.csv"
 
+  foodmap = {"Cereales y deriv" => 1, "Carne y produc carn" => 2, "Pescados y mariscos" => 3, "Huevos" => 4, "Leche y produc lact" => 5, "Leguminosas" => 6, "Tuberculos y raices" => 7, "Legumbres" => 8, "Frutas y deriv" => 9, "Alimentos preparados" => 10, "Alimentos varios" => 11, "Bebidas" => 12, "Nueces y afines" => 13, "Alimentos Amazonas" => 14}
+
   number_of_features = 51
   number_of_outputs = 1
   raw_inputs, raw_outputs = DataProcessor.load_raw_data(file_path, number_of_features, number_of_outputs)
