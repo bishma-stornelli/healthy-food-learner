@@ -112,6 +112,14 @@ class Learner
     end
   end  
   
+  def correct_classified(examples, outputs)
+    examples.each_with_index.inject(0) do |acc, (ei, i)|
+      o = evaluate(ei)
+
+      o.last.round == outputs[i][0] ? acc + 1 : acc
+    end
+  end
+  
   private
 
   def sig(x)

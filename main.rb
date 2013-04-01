@@ -35,92 +35,86 @@ require './learner.rb'
 # para que en vez de entrenar hasta que se cumpla un criterio de parada, simplemente procese
 # una vez los datos, ajuste los pesos y ya. Luego en el main se hace como dicen las lineas 6-8.
 begin
+  Dir.mkdir("outputs") unless File.directory? "outputs"
+  Dir.mkdir("outputs/correct") unless File.directory? "outputs/correct"
+  Dir.mkdir("outputs/error") unless File.directory? "outputs/error"
+  
   # Look the best combination for each file
   bests = {}
-  file_path = "data.csv"
+  file_path = "data_example.csv"
+  puts "Colocar nombre de archivo correcto en linea 44 del main.rb y borrar las lineas 45, 46 y 47"
+end
+if nil
 
-  foodmap = {"Cereales y deriv" => 1, "Carne y produc carn" => 2, "Pescados y mariscos" => 3, "Huevos" => 4, "Leche y produc lact" => 5, "Leguminosas" => 6, "Tuberculos y raices" => 7, "Legumbres" => 8, "Frutas y deriv" => 9, "Alimentos preparados" => 10, "Alimentos varios" => 11, "Bebidas" => 12, "Nueces y afines" => 13, "Alimentos Amazonas" => 14}
-
-  number_of_features = 51
+  number_of_features = 2
   number_of_outputs = 1
-  raw_inputs, raw_outputs = DataProcessor.load_raw_data(file_path, number_of_features, number_of_outputs)
-
-# Normalizar datos primera vez: mapear strings a Float 
-# OJO: Esto supone que todos los datos son numeros. Si hubiesen datos nominales habría
-# que llevarlos a numero primero
-  raw_inputs.map!{|e| e.map!{|e1| e1.empty? ? nil : e1.to_f}}
-  raw_outputs.map!{|e| e.map!{|e1| e1.empty? ? nil : e1.to_f}}
-
-# Tratar missing values
-
-  raw_inputs, column_info = DataProcessor.treat_missing_values!(raw_inputs, [:mean] * number_of_features)
-
-# Normalizar datos por segunda vez: (llevar continuos a clases) (Creo que esto no es necesario)
-
-# Separar datos en entrenamiento y prueba
-  split_ratio = 0.5
-  training_inputs, training_outputs = DataProcessor.split_examples!(raw_inputs, raw_outputs, split_ratio)
-  testing_inputs, testing_outputs = raw_inputs, raw_outputs
-
-  #return
+  configuration = 1
+              
+  f_config = File.open("outputs/configuration.csv", "w")
+  f_config.puts "Configuración,Neuronas ocultas,tasa de aprendizaje,unbalanced data,missing data,split ration,Tiempo de entrenamiento,Error sobre entrenamiento,Error sobre prueba,Numero de iteraciones,Correctos en entrenamiento,Tamaño entrenamiento,Correctos en prueba,Tamaño prueba"  
+  
   (6..15).each do |n_hidden|
     [0.01, 0.05, 0.1, 0.2, 0.3].each do |learning_rate|
-      puts "Probando archivo #{file_path} con #{n_hidden} neuronas y tasa de aprendizaje #{learning_rate}"
-      
-      l = Learner.new(number_of_features, n_hidden, learning_rate)
-      l.training_examples = training_inputs
-      l.testing_examples = testing_inputs
-      l.training_outputs = training_outputs
-      l.testing_outputs = testing_outputs
-      
-      while (l.current_error > 0.1 && l.current_iteration < 1000)
-        correct = l.train
-        
-        if l.current_iteration % 100 == 0
-          puts "> #{l.current_iteration}, Correct = #{correct}/#{l.training_examples.size}"
+      [nil].each do |unbalance_method|
+        [:zero, :mean].each do |missing_data_method| # Pudiese usarse para algunas columnas un metodo y para otras otro pero es ponerse muy exquisito
+          [0.3, 0.5, 0.7].each do |split_ratio|
+            raw_inputs, raw_outputs = DataProcessor.load_raw_data(file_path, number_of_features, number_of_outputs)
+            
+            # Normalizar datos primera vez: mapear strings a Float 
+            # OJO: Esto supone que todos los datos son numeros. Si hubiesen datos nominales habría
+            # que llevarlos a numero primero
+            raw_inputs.map!{|e| e.map!{|e1| e1.empty? ? nil : e1.to_f}}
+            raw_outputs.map!{|e| e.map!{|e1| e1.empty? ? nil : e1.to_f}}
+            
+            # Tratar missing values
+            raw_inputs, column_info = DataProcessor.treat_missing_values!(raw_inputs, [missing_data_method] * number_of_features)
+
+            # Separar datos en entrenamiento y prueba
+            training_inputs, training_outputs = DataProcessor.split_examples!(raw_inputs, raw_outputs, split_ratio) # Este metodo acepta :random o :uniformly como ultimo parametro
+            testing_inputs, testing_outputs = raw_inputs, raw_outputs
+
+
+            l = Learner.new(number_of_features, n_hidden, learning_rate)
+            l.training_examples = training_inputs
+            l.testing_examples = testing_inputs
+            l.training_outputs = training_outputs
+            l.testing_outputs = testing_outputs
+            
+            # Empezar con entrenamiento
+            puts "Probando configuración #{configuration}"
+            
+            file_correct = File.open("outputs/correct/#{configuration}", "w")
+            file_error = File.open("outputs/error/#{configuration}", "w")
+            
+            t_ini = Time.now
+            t_fin = Time.now
+            while (l.current_error > 0.01 && (t_fin - t_ini) < 60)
+              correct = l.train
+              
+              file_correct.puts("#{l.current_iteration},#{correct}")
+              file_error.puts("#{l.current_iteration},#{l.current_error}")
+              
+              if l.current_iteration % 100 == 0
+                puts "> #{l.current_iteration}, Correct = #{correct}/#{l.training_examples.size}, error = #{l.current_error}"
+              end
+              t_fin = Time.now
+            end
+            
+            file_correct.close
+            file_error.close
+            
+            testing_error = l.error(l.testing_examples, l.testing_outputs)
+            testing_correct = l.correct_classified( l.testing_examples, l.testing_outputs )
+            puts "Error en prueba: #{testing_error},Error en entrenamiento: #{l.error(l.training_examples, l.training_outputs)}"
+            f_config.puts "#{configuration},#{n_hidden},#{learning_rate},#{unbalance_method},#{missing_data_method},#{split_ratio},#{t_fin - t_ini},#{l.current_error},#{testing_error},#{l.current_iteration},#{correct},#{l.training_outputs.size},#{testing_correct},#{l.testing_outputs.size}"  
+            f_config.flush
+            configuration += 1
+          end
         end
       end
       
-      bests[file_path] = {
-          :n_hidden => -1, 
-          :learning_rate => -1, 
-          :error => {
-            :testing => Float::INFINITY, :training => Float::INFINITY
-          },
-          :learner => nil
-        } if bests[file_path].nil?
-      
-      testing_error = l.error(l.testing_examples, l.testing_outputs)
-      # if testing_error < bests[file_path][:error][:testing]
-        # bests[file_path][:n_hidden] = n_hidden
-        # bests[file_path][:learning_rate] = learning_rate
-        # bests[file_path][:error][:testing] = testing_error
-        # bests[file_path][:error][:training] = l.error(l.training_examples, l.training_outputs)
-        # bests[file_path][:learner] = l
-      # end
-      puts "\tError en prueba: #{testing_error}\tError en entrenamiento: #{l.error(l.training_examples, l.training_outputs)}"
     end
   end
   
-  # f_config = File.open("outputs/configuration", "w")
-  # f_config.write("File\t\tn_hidden\t\tlearning_rate\t\ttesting_error\t\ttraining_error\n")
-#     
-  # bests.each do |file_path, conf|
-    # f_config.write("#{file_path}\t\t#{conf[:n_hidden]}\t\t#{conf[:learning_rate]}" +
-      # "\t\t#{conf[:error][:testing]}\t\t#{conf[:error][:training]}\n")
-#     
-    # f1 = File.open("outputs/#{file_path}_0", "w")
-    # f2 = File.open("outputs/#{file_path}_1", "w")
-#     
-    # l = conf[:learner]
-    # l.training_examples.each do |e|
-      # o = e.dup
-      # o << l.evaluate(e).last
-      # f = o.last.round == 0 ? f1 : f2
-      # f.write("#{o.join(",")}\n")
-    # end
-    # f1.close
-    # f2.close
-  # end
-  # f_config.close
+  f_config.close
 end
