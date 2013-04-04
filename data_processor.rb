@@ -1,6 +1,5 @@
-require 'rubygems'
-gem 'knn'
-require 'knn'
+# require 'rubygems'
+ require './knn'
 
 class DataProcessor
   
@@ -127,21 +126,20 @@ class DataProcessor
       end
     end
 
-    knn = new(ms)
+    knn = KNN.new ms
 
     d = ms.length / ml.length
 
     if d < dth
 
       gm = (ml.length - ms.length)*beta
-
       r = Array.new()
       
       ms.each_with_index do |variable,i|
         data = Array.new()
-        data << k_nearest_neighbours(variable, k)
-        data << variable
-        r << data.last.length/k
+        data << KNN.k_nearest_neighbours(variable, 6)
+        #data.concat(variable)
+        r << data.last.length/6
       end
 
       sum = r.reduce(0.0, :+)
@@ -163,16 +161,50 @@ class DataProcessor
           variable.each_with_index do |item, j|
             tmp = variable[j] + (data[j].sample - variable[j]) * lambda
           end
-          new_data << tmp
+          new_data.concat(tmp)
         end
       end
 
-      raw_data + new_data
+      raw_data.concat(new_data)
       # agregar a outputs los resultados
-
     end
 
+  end
 
+  # Balance data for the learning machine 
+  def self.balance_data_oversampling!(raw_data, outputs)
+
+    ms = Array.new()
+    ml = Array.new()
+
+    raw_data.each_with_index do |variable,i|
+      if outputs[i] == [0.0]
+        ms << variable
+      else
+        ml << variable
+      end
+    end
+
+    new_data = Array.new()
+    new_outputs = Array.new()
+
+    if ms.length == 0
+      return
+    end
+
+    while new_data.length + ms.length < ml.length
+      new_data.concat(ms)
+    end
+
+    if new_data.length < ml.length
+      new_data.concat(ms.take(ml.length - new_data.length))
+    end
+
+    new_outputs = Array.new(new_data.length) { [0.0] }
+
+    raw_data.concat(new_data)
+
+    outputs.concat(new_outputs)
 
   end
   
