@@ -1,3 +1,7 @@
+require 'rubygems'
+gem 'knn'
+require 'knn'
+
 class DataProcessor
   
   # Read all lines of csv file +file_path+ and take +features+
@@ -107,6 +111,69 @@ class DataProcessor
   # WARNING: raw_data is changed, i.e. it modify the input data
   def self.map_raw_data!(raw_data, mapper)
     
+  end
+
+  # Balance data for the learning machine 
+  def self.balance_data!(raw_data, outputs, dth = 0.5, beta = 1)
+
+    ms = Array.new()
+    ml = Array.new()
+
+    raw_data.each_with_index do |variable,i|
+      if outputs[i] == 0
+        ms << variable
+      else
+        ml << variable
+      end
+    end
+
+    knn = new(ms)
+
+    d = ms.length / ml.length
+
+    if d < dth
+
+      gm = (ml.length - ms.length)*beta
+
+      r = Array.new()
+      
+      ms.each_with_index do |variable,i|
+        data = Array.new()
+        data << k_nearest_neighbours(variable, k)
+        data << variable
+        r << data.last.length/k
+      end
+
+      sum = r.reduce(0.0, :+)
+      
+      r.map { |a| a/sum }
+
+      g = Array.new()
+
+      r.each do |variable|
+        g << variable * gm
+      end
+
+      new_data = Array.new()
+
+      ms.each_with_index do |variable,i|
+        (1..g[i]).each do
+          lambda = rand
+          tmp = 0
+          variable.each_with_index do |item, j|
+            tmp = variable[j] + (data[j].sample - variable[j]) * lambda
+          end
+          new_data << tmp
+        end
+      end
+
+      raw_data + new_data
+      # agregar a outputs los resultados
+
+    end
+
+
+
   end
   
   # Divide +features+ in 2 sets of size +features.size * ratio+ and
