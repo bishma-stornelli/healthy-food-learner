@@ -41,7 +41,7 @@ begin
   
   # Look the best combination for each file
   bests = {}
-  file_path = "data_example.csv"
+  file_path = "data.csv"
   puts "Colocar nombre de archivo correcto en linea 44 del main.rb y borrar las lineas 45, 46 y 47"
 end
 if nil
