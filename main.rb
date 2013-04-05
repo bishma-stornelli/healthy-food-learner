@@ -42,9 +42,6 @@ begin
   # Look the best combination for each file
   bests = {}
   file_path = "data.csv"
-  puts "Colocar nombre de archivo correcto en linea 44 del main.rb y borrar las lineas 45, 46 y 47"
-end
-if nil
 
   number_of_features = 27
   number_of_outputs = 1
@@ -55,7 +52,7 @@ if nil
   
   (6..15).each do |n_hidden|
     [0.01, 0.05, 0.1, 0.2, 0.3].each do |learning_rate|
-      [nil].each do |unbalance_method|
+      [:adasyn].each do |unbalance_method|
         [:zero, :mean].each do |missing_data_method| # Pudiese usarse para algunas columnas un metodo y para otras otro pero es ponerse muy exquisito
           [0.3, 0.5, 0.7].each do |split_ratio|
             raw_inputs, raw_outputs = DataProcessor.load_raw_data(file_path, number_of_features, number_of_outputs)
@@ -74,7 +71,8 @@ if nil
             # Separar datos en entrenamiento y prueba
             training_inputs, training_outputs = DataProcessor.split_examples!(raw_inputs, raw_outputs, split_ratio) # Este metodo acepta :random o :uniformly como ultimo parametro
             testing_inputs, testing_outputs = raw_inputs, raw_outputs
-
+            
+            #puts "There are #{testing_outputs.count [0]} examples negative in testing and #{testing_outputs.count [1]} positive"
 
             l = Learner.new(number_of_features, n_hidden, learning_rate)
             l.training_examples = training_inputs

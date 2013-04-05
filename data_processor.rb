@@ -114,18 +114,18 @@ class DataProcessor
 
   # Balance data for the learning machine 
   # dth la proporcion que podemos tolerar de la clase minoritaria (1 => 1:1)
-  def self.balance_data!(raw_data, outputs, dth = 1.0, beta = 1.0, k = nil)
-    k ||= (raw_data.size * 0.05).round
-    puts "Se buscaran #{k} vecinos"
+  def self.balance_data!(raw_data, outputs, dth = 1.0, beta = 1.0, k = 10)
+    #k ||= (raw_data.size * 0.1).round
+    #puts "Se buscaran #{k} vecinos"
     ms = Array.new()
     ml = Array.new()
 
     raw_data.each_with_index do |variable, i|
       if outputs[i] == [0]
-        puts "Ejemplo #{i} es min"
+        #puts "Ejemplo #{i} es min"
         ms << variable
       else
-        puts "Ejemplo #{i} es MAY"
+        #puts "Ejemplo #{i} es MAY"
         ml << variable
       end
     end
@@ -133,32 +133,34 @@ class DataProcessor
     knn = KNN.new raw_data
 
     d = ms.length.to_f / ml.length.to_f
-    puts "Hay #{d}% ejemplos mayoritarios"
+    #puts "Hay #{d}% ejemplos mayoritarios"
     
     if d < dth
 
       gm = (ml.length - ms.length) * beta
       
-      puts "Se tienen que generar #{gm} ejemplos minoritarios"
+      #puts "Se tienen que generar #{gm} ejemplos minoritarios"
       
       r = Array.new()
       neighbours = Array.new ms.size
       ms.each_with_index do |example, i|
         neighbours[i] = knn.nearest_neighbours(example, k + 1) 
         neighbours[i].delete_at 0 # example is inside the set so the closest element will be itself.
+        #puts "Neighbours of #{i} are: #{neighbours[i].inspect}"
         number_of_neighbours_in_majority = neighbours[i].count do |neighbour|
-          outputs[neighbour.first] != 0
+          outputs[neighbour.first] != [0]
         end
-        r << number_of_neighbours_in_majority / k
+        #puts "There are #{number_of_neighbours_in_majority} neighbours positive in neighborhood of example #{i}"
+        r << number_of_neighbours_in_majority / k.to_f
       end
       
-      puts "Los ri antes de normalizar son: #{r.inspect}"
+      #puts "Los ri antes de normalizar son: #{r.inspect}"
 
       sum = r.reduce(0.0, :+)
       
       r.map! { |a| a / sum }
       
-      puts "Y despues son: #{r.inspect}"
+      #puts "Y despues son: #{r.inspect}"
       
       g = Array.new()
 
@@ -166,12 +168,12 @@ class DataProcessor
         g << (variable * gm).round
       end
 
-      puts "Los g son: #{g.inspect}"
+      #puts "Los g son: #{g.inspect}"
       
       new_data = Array.new()
 
       ms.each_with_index do |variable, i|
-        puts "A partir del ejemplo #{i} minoritario se van a generar #{g[i]} ejemplos mas"
+        #puts "A partir del ejemplo #{i} minoritario se van a generar #{g[i]} ejemplos mas" if g[i] > 0
         g[i].times do
           lambda = rand
           xzi = neighbours[i].sample[2]
