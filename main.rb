@@ -69,6 +69,8 @@ if nil
             # Tratar missing values
             raw_inputs, column_info = DataProcessor.treat_missing_values!(raw_inputs, [missing_data_method] * number_of_features)
 
+            DataProcessor.balance_data!(raw_inputs, raw_outputs)
+
             # Separar datos en entrenamiento y prueba
             training_inputs, training_outputs = DataProcessor.split_examples!(raw_inputs, raw_outputs, split_ratio) # Este metodo acepta :random o :uniformly como ultimo parametro
             testing_inputs, testing_outputs = raw_inputs, raw_outputs

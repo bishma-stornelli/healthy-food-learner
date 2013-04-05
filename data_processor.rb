@@ -1,5 +1,5 @@
-# require 'rubygems'
- require './knn'
+require 'rubygems'
+require 'knn'
 
 class DataProcessor
   
@@ -113,62 +113,76 @@ class DataProcessor
   end
 
   # Balance data for the learning machine 
-  def self.balance_data!(raw_data, outputs, dth = 0.5, beta = 1)
-
+  # dth la proporcion que podemos tolerar de la clase minoritaria (1 => 1:1)
+  def self.balance_data!(raw_data, outputs, dth = 1.0, beta = 1.0, k = nil)
+    k ||= (raw_data.size * 0.05).round
+    puts "Se buscaran #{k} vecinos"
     ms = Array.new()
     ml = Array.new()
 
-    raw_data.each_with_index do |variable,i|
-      if outputs[i] == 0
+    raw_data.each_with_index do |variable, i|
+      if outputs[i] == [0]
+        puts "Ejemplo #{i} es min"
         ms << variable
       else
+        puts "Ejemplo #{i} es MAY"
         ml << variable
       end
     end
 
-    knn = KNN.new ms
+    knn = KNN.new raw_data
 
-    d = ms.length / ml.length
-
+    d = ms.length.to_f / ml.length.to_f
+    puts "Hay #{d}% ejemplos mayoritarios"
+    
     if d < dth
 
-      gm = (ml.length - ms.length)*beta
-      r = Array.new()
+      gm = (ml.length - ms.length) * beta
       
-      ms.each_with_index do |variable,i|
-        data = Array.new()
-        data << KNN.k_nearest_neighbours(variable, 6)
-        #data.concat(variable)
-        r << data.last.length/6
+      puts "Se tienen que generar #{gm} ejemplos minoritarios"
+      
+      r = Array.new()
+      neighbours = Array.new ms.size
+      ms.each_with_index do |example, i|
+        neighbours[i] = knn.nearest_neighbours(example, k + 1) 
+        neighbours[i].delete_at 0 # example is inside the set so the closest element will be itself.
+        number_of_neighbours_in_majority = neighbours[i].count do |neighbour|
+          outputs[neighbour.first] != 0
+        end
+        r << number_of_neighbours_in_majority / k
       end
+      
+      puts "Los ri antes de normalizar son: #{r.inspect}"
 
       sum = r.reduce(0.0, :+)
       
-      r.map { |a| a/sum }
-
+      r.map! { |a| a / sum }
+      
+      puts "Y despues son: #{r.inspect}"
+      
       g = Array.new()
 
       r.each do |variable|
-        g << variable * gm
+        g << (variable * gm).round
       end
 
+      puts "Los g son: #{g.inspect}"
+      
       new_data = Array.new()
 
-      ms.each_with_index do |variable,i|
-        (1..g[i]).each do
+      ms.each_with_index do |variable, i|
+        puts "A partir del ejemplo #{i} minoritario se van a generar #{g[i]} ejemplos mas"
+        g[i].times do
           lambda = rand
+          xzi = neighbours[i].sample[2]
+          #puts "El vecino elegido es:"
           tmp = 0
-          variable.each_with_index do |item, j|
-            tmp = variable[j] + (data[j].sample - variable[j]) * lambda
-          end
-          new_data.concat(tmp)
+          si = variable.each_with_index.map {|f, j| f + (xzi[j] - f) * lambda}
+          raw_data << si
+          outputs << [0]
         end
       end
-
-      raw_data.concat(new_data)
-      # agregar a outputs los resultados
     end
-
   end
 
   # Balance data for the learning machine 
